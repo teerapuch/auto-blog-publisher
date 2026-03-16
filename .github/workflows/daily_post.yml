@@ -1,0 +1,53 @@
+name: 🤖 Auto Blog Publisher — Daily
+
+on:
+  # ทุกวัน เวลา 09:00 น. Bangkok Time (UTC+7 → 02:00 UTC)
+  schedule:
+    - cron: "0 2 * * *"
+
+  # Trigger ด้วยมือ (สำหรับทดสอบ)
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Generate & Publish Blog Post
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 📦 Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 🚀 Run Auto Blog Publisher
+        env:
+          # ── AI ────────────────────────────────────────────────
+          ANTHROPIC_API_KEY:        ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_AI_API_KEY:        ${{ secrets.GOOGLE_AI_API_KEY }}   # Optional
+
+          # ── Google Sheets ─────────────────────────────────────
+          GOOGLE_SHEETS_CREDS_JSON: ${{ secrets.GOOGLE_SHEETS_CREDS_JSON }}
+          GOOGLE_SHEET_ID:          ${{ secrets.GOOGLE_SHEET_ID }}
+
+          # ── WordPress ─────────────────────────────────────────
+          WP_URL:                   https://teerapuch.com
+          WP_USERNAME:              teerapuch
+          WP_APP_PASSWORD:          ${{ secrets.WP_APP_PASSWORD }}
+
+        run: python auto_blog_publisher.py
+
+      - name: 📊 Summary
+        if: always()
+        run: |
+          echo "## 📝 Auto Blog Publisher" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date (UTC):** $(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
